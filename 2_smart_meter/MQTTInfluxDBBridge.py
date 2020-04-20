@@ -1,6 +1,5 @@
 import base64
 from typing import NamedTuple
-
 import paho.mqtt.client as mqtt
 from influxdb import InfluxDBClient
 
@@ -18,15 +17,14 @@ MQTT_PASSWORD = '4mp3r3h0ur'
 MQTT_TOPIC = 'IoT2020sec/meters'
 #MQTT_CAPATH = '/etc/ssl/certs/ca-certificates.crt'
 MQTT_CAPATH = './certs/ca-certificates.crt'
-MQTT_CLIENT_ID = 'MQTTInfluxDBBridge'
 
 influxdb_client = InfluxDBClient(INFLUXDB_ADDRESS, INFLUXDB_PORT, INFLUXDB_USER, INFLUXDB_PASSWORD, None)
 
 class SensorData(NamedTuple):
-    isRealData: bool
+    is_data_real : bool
     meter_id : int
-    timestamp: int
-    value: int
+    timestamp : int
+    value : int
 
 
 def on_connect(client, userdata, flags, rc):
@@ -60,7 +58,7 @@ def _send_sensor_data_to_influxdb(sensor_data):
         {
             'measurement': 'smart_meter',
             'tags': {
-                'isRealData': sensor_data.isRealData
+                'is_data_real': sensor_data.is_data_real
             },
             'fields': {
                 'meter_id': sensor_data.meter_id,
@@ -85,7 +83,7 @@ def _init_influxdb_database():
 def main():
     _init_influxdb_database()
 
-    mqtt_client = mqtt.Client(MQTT_CLIENT_ID)
+    mqtt_client = mqtt.Client()
     mqtt_client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
     mqtt_client.tls_set(MQTT_CAPATH)
     mqtt_client.on_connect = on_connect
