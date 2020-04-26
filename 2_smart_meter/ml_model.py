@@ -1,34 +1,15 @@
-from influxdb import InfluxDBClient
-from time import sleep
-from math import sqrt
-from numpy import array
-from sklearn.metrics import mean_squared_error
-from matplotlib import pyplot
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import Lasso
-from sklearn.linear_model import Ridge
-from sklearn.linear_model import ElasticNet
-from sklearn.linear_model import HuberRegressor
-from sklearn.linear_model import Lars
-from sklearn.linear_model import LassoLars
-from sklearn.linear_model import PassiveAggressiveRegressor
-from sklearn.linear_model import RANSACRegressor
-from sklearn.linear_model import SGDRegressor
-from sklearn.svm import SVR
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.isotonic import IsotonicRegression
-from sklearn.neural_network import MLPRegressor
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.ensemble import VotingRegressor
-import pandas as pd
 import datetime as dt
-import random
+from math import sqrt
+from time import sleep
+
+import pandas as pd
+from influxdb import InfluxDBClient
+from numpy import array
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 
 INFLUXDB_ADDRESS = 'localhost'
 INFLUXDB_PORT = 8086
@@ -39,6 +20,7 @@ INFLUXDB_DATABASE = 'smart_meter'
 influxdb_client = InfluxDBClient(INFLUXDB_ADDRESS, INFLUXDB_PORT, INFLUXDB_USER, INFLUXDB_PASSWORD, INFLUXDB_DATABASE)
 
 
+# read data for particular meter id (household)
 def read_data(meter_id):
     query = "SELECT timestamp,value FROM smart_meter WHERE is_data_real = 'True' AND meter_id = " + str(
         meter_id) + " ORDER BY time"
@@ -57,42 +39,14 @@ def read_data(meter_id):
     return consumption_df, date_time
 
 
-def split_data(data):
-    train, test = data[0:-24], data[-24:]
-    train = array(train)
-    test = array(test)
-    return train, test
-
-
-# evaluate one or more weekly forecasts against expected values
+# calculate root mean square error
 def evaluate_forecasts(actual, predicted):
-    mse = mean_squared_error(actual, predicted)
-    # calculate rmse
-    return sqrt(mse)
+    return sqrt(mean_squared_error(actual, predicted))
 
 
 # prepare a list of ml models
 def get_models(models=dict()):
-    # linear models
-    # models['lr'] = LinearRegression()
-    # models['lasso'] = Lasso()
-    # models['ridge'] = Ridge()
-    # models['en'] = ElasticNet()
-    # models['huber'] = HuberRegressor()
-    # models['lars'] = Lars()
-    # models['llars'] = LassoLars()
-    # models['pa'] = PassiveAggressiveRegressor(max_iter=1000, tol=1e-3)
-    # models['ranscac'] = RANSACRegressor()
-    # models['sgd'] = SGDRegressor(max_iter=1000, tol=1e-3)
-    models['svr'] = SVR(kernel='rbf', C=100, gamma=0.1, epsilon=.1)
-    models['knn'] = KNeighborsRegressor(3)
-    models['gpr'] = GaussianProcessRegressor()
-    models['dt'] = DecisionTreeRegressor()
-    # models['isotonic'] = IsotonicRegression()
-    models['mlp'] = MLPRegressor()
-    models['gbr'] = GradientBoostingRegressor(random_state=1, n_estimators=100)
     models['rfr'] = RandomForestRegressor(random_state=1, n_estimators=100)
-    models['vr'] = VotingRegressor(estimators=[('gb', models['gbr']), ('rf', models['rfr'])])
     print('Defined %d models' % len(models))
     return models
 
@@ -111,18 +65,18 @@ def make_pipeline(model):
     return pipeline
 
 
-# convert history into inputs and outputs
-def to_supervised(history):
+# convert data into inputs and outputs
+def to_supervised(data):
     X, y = list(), list()
-    # step over the entire history one time step at a time
-    for i in range(len(history)):
-        X.append(history[i][:-1])
-        y.append(history[i][-1])
+    for i in range(len(data)):
+        X.append(data[i][:-1])
+        y.append(data[i][-1])
     return array(X), array(y)
 
 
 # evaluate a single model
 def evaluate_model(model, train, test):
+    # convert train/test data to inputs and outputs
     train_x, train_y = to_supervised(train)
     test_x, test_y = to_supervised(test)
     # make pipeline
@@ -150,7 +104,7 @@ def _send_sensor_data_to_influxdb(time, meter_id, value):
         }
     ]
     print(json_body)
-    # influxdb_client.write_points(json_body, time_precision='s')
+    influxdb_client.write_points(json_body, time_precision='s')
 
 
 def main():
@@ -161,23 +115,16 @@ def main():
             # compute next 48 hours
             for _ in range(48):
                 date_time += dt.timedelta(hours=1)
-                test = [1 if (date_time).weekday() < 5 else 0, date_time.hour, 0]
-                next_hour_df = pd.DataFrame.from_records([test], columns=["workday", "hour", "timestamp"])
+                next_hour_X = [1 if (date_time).weekday() < 5 else 0, date_time.hour, 0]
+                next_hour_df = pd.DataFrame.from_records([next_hour_X], columns=["workday", "hour", "timestamp"])
                 score, scores = evaluate_model(models['rfr'],
                                                array(consumption_df[["workday", "hour", "value"]].values),
                                                next_hour_df.values)
+                # insert column (predicted) value
                 next_hour_df.insert(2, "value", scores)
                 _send_sensor_data_to_influxdb(date_time, meter_id, scores[0])
+                # concatenate dataframes
                 consumption_df = pd.concat([consumption_df, next_hour_df])
-
-            train, test = split_data(consumption_df[["workday", "hour", "value"]].values)
-            # for name, model in models.items():
-            #     score, scores = evaluate_model(model, train, test)
-            #     pyplot.plot(list(range(24)), scores, marker='o', label=name)
-            #     print(name, score)
-            # pyplot.plot(list(range(24)), [x[-1] for x in test], marker='o', label='real')
-            # pyplot.legend()
-            # pyplot.show()
         break
         sleep(3600)
 
