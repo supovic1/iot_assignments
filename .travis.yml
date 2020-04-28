@@ -1,0 +1,40 @@
+arch: arm64
+os: linux
+dist: xenial
+language: ruby
+services:
+  - docker
+
+before_install: 
+  # check archicture. .com does not support arm atm.
+  - dpkg --print-architecture
+  
+  # installing newer docker
+  - sudo apt-get update
+  
+  - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD";
+  
+  # installing the faas-cli
+  - curl -sSL https://cli.openfaas.com | sudo sh
+
+jobs:
+  include:
+    - stage: Create OpenFaas secrets 
+      script:
+        - echo -n $OPENFAAS_PASS | faas-cli login --username admin --password-stdin -g https://gateway.christoffernissen.me
+        - echo -n $INFLUX_USER | faas-cli secret create influx-user -g https://gateway.christoffernissen.me
+        - echo -n $INFLUX_PASS | faas-cli secret create influx-pass -g https://gateway.christoffernissen.me
+
+    - stage: functions
+      script:
+        - echo -n $OPENFAAS_PASS | faas-cli login --username admin --password-stdin -g https://gateway.christoffernissen.me
+        - faas-cli up -f 2_smart_meter/edge/iot-assignment2.yml --env write_debug=true
+        # - faas-cli up -f iot/iot-ml-func.yml --env write_debug=true
+
+    - stage: mqtt helper container
+      script:
+        - docker build -f iot/helper/Dockerfile 2_smart_meter/edge/helper -t stifstof/iotmqttinterceptor
+        - docker push stifstof/iotmqttinterceptor:latest
+
+  # kubectl run --image=stifstof/iotmqttinterceptor iotmqttinterceptor-app --env="mqtt-pass="
+  
