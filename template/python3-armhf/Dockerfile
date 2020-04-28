@@ -30,8 +30,6 @@ RUN touch ./function/__init__.py
 
 WORKDIR /home/app/function/
 COPY function/ .
-# COPY function/requirements.txt	.
-RUN ls
 
 RUN pip install -r requirements.txt --target=/home/app/python
 
