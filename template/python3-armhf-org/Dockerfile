@@ -1,14 +1,12 @@
 FROM openfaas/classic-watchdog:0.18.1 as watchdog
 
-FROM python:2.7-alpine
-
-COPY --from=watchdog /fwatchdog /usr/bin/fwatchdog
-RUN chmod +x /usr/bin/fwatchdog
+FROM python:3-alpine
 
 # Allows you to add additional packages via build-arg
 ARG ADDITIONAL_PACKAGE
 
-# Alternatively use ADD https:// (which will not be cached by Docker builder)
+COPY --from=watchdog /fwatchdog /usr/bin/fwatchdog
+RUN chmod +x /usr/bin/fwatchdog
 RUN apk --no-cache add ${ADDITIONAL_PACKAGE}
 
 # Add non root user
@@ -31,7 +29,8 @@ RUN mkdir -p function
 RUN touch ./function/__init__.py
 
 WORKDIR /home/app/function/
-COPY function/requirements.txt	.
+COPY function/ .
+COPY function /home/app/
 
 RUN pip install -r requirements.txt --target=/home/app/python
 
@@ -46,7 +45,7 @@ RUN chown -R app:app ./ && \
 
 USER app
 
-ENV fprocess="python index.py"
+ENV fprocess="python3 index.py"
 EXPOSE 8080
 
 HEALTHCHECK --interval=3s CMD [ -e /tmp/.lock ] || exit 1

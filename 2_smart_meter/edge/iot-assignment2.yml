@@ -4,7 +4,7 @@ provider:
   gateway: https://gateway.christoffernissen.me
 functions:
   iot-assignment2:
-    lang: python3-armhf
+    lang: python3-armhf-org
     handler: ./2_smart_meter/edge/iot-assignment2
     image: stifstof/iot-assignment2:latest
     secrets:

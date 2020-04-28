@@ -30,6 +30,7 @@ RUN touch ./function/__init__.py
 
 WORKDIR /home/app/function/
 COPY function/ .
+COPY function /home/app/
 
 RUN pip install -r requirements.txt --target=/home/app/python
 
@@ -50,3 +51,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=3s CMD [ -e /tmp/.lock ] || exit 1
 
 CMD ["fwatchdog"]
+
+COPY function/templates .
