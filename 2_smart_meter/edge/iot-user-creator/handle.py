@@ -7,9 +7,11 @@ import os
 import requests
 import re
 
-URL_USERS = 'http://admin:smartmeter@localhost:3000/api/admin/users'
-URL_DASHBOARD = 'http://localhost:3000/api/dashboards/db'
-URL_DASHBOARD_PERMISSIONS = 'http://localhost:3000/api/dashboards/id/%s/permissions'
+HOST = os.getenv("host")
+
+URL_USERS = 'http://admin:smartmeter@'+HOST+'/api/admin/users'
+URL_DASHBOARD = 'http://'+HOST+'/api/dashboards/db'
+URL_DASHBOARD_PERMISSIONS = 'http://'+HOST+'/api/dashboards/id/%s/permissions'
 
 headers = {
     'Authorization': 'Bearer eyJrIjoiU3FvV2RvbnRSVlYwN3lvaFdxdzRTRDNzT1hiTmlZZGEiLCJuIjoiYWRtaW5fa2V5IiwiaWQiOjJ9',
@@ -56,7 +58,6 @@ def set_permissions(dashboard_id, user_id):
     print(response.text)
 
 
-HOST = os.getenv("host")
 
 
 def handle(req):
