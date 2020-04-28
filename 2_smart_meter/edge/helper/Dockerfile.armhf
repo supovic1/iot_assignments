@@ -1,0 +1,9 @@
+FROM arm64v8/python
+
+ADD app.py /
+ADD certs /certs/
+ADD requirements.txt /
+
+RUN pip install -r requirements.txt
+
+CMD [ "python", "./app.py" ]
