@@ -24,7 +24,7 @@ def _extract_id(str):
 
 
 def generate_user_data(meter_id):
-    email = "meter_id_" + str(meter_id) + "@localhost"
+    email = "meter_id_" + str(meter_id) + "@" + HOST
     password = "meter_id_" + str(meter_id)
     print ('login:', email, 'password:', password)
     return '{ "email": "' + email + '", "login": "' + email + '","password": "' + password + '" }'
@@ -32,7 +32,7 @@ def generate_user_data(meter_id):
 
 def create_user(meter_id):
     response = requests.post(URL_USERS, headers=headers, data=generate_user_data(meter_id))
-    print(response.text)
+    print("Response:", response.text)
     return _extract_id(response.text)
 
 
@@ -56,7 +56,6 @@ def set_permissions(dashboard_id, user_id):
     response = requests.post(URL_DASHBOARD_PERMISSIONS.replace('%s', str(dashboard_id)), headers=headers,
                              data=permissions)
     print(response.text)
-
 
 
 
