@@ -1,4 +1,1 @@
-scikit-learn
 influxdb
-numpy
-pandas

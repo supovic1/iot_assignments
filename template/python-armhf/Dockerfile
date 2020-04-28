@@ -1,13 +1,14 @@
 FROM openfaas/classic-watchdog:0.18.1 as watchdog
 
- 
-FROM publysher/alpine-scipy:1.0.0-numpy1.14.0-python3.6-alpine3.7
-RUN apk --no-cache add --virtual .builddeps g++ musl-dev     && pip install scikit-learn==0.19.1     && apk del .builddeps     && rm -rf /root/.cache
-# Allows you to add additional packages via build-arg
-ARG ADDITIONAL_PACKAGE
+FROM python:2.7-alpine
 
 COPY --from=watchdog /fwatchdog /usr/bin/fwatchdog
 RUN chmod +x /usr/bin/fwatchdog
+
+# Allows you to add additional packages via build-arg
+ARG ADDITIONAL_PACKAGE
+
+# Alternatively use ADD https:// (which will not be cached by Docker builder)
 RUN apk --no-cache add ${ADDITIONAL_PACKAGE}
 
 # Add non root user
@@ -30,8 +31,7 @@ RUN mkdir -p function
 RUN touch ./function/__init__.py
 
 WORKDIR /home/app/function/
-COPY function/ .
-# COPY function/requirements.txt	.
+COPY function/requirements.txt	.
 
 RUN pip install -r requirements.txt --target=/home/app/python
 
@@ -46,7 +46,7 @@ RUN chown -R app:app ./ && \
 
 USER app
 
-ENV fprocess="python3 index.py"
+ENV fprocess="python index.py"
 EXPOSE 8080
 
 HEALTHCHECK --interval=3s CMD [ -e /tmp/.lock ] || exit 1

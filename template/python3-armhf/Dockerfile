@@ -1,8 +1,7 @@
 FROM openfaas/classic-watchdog:0.18.1 as watchdog
 
- 
-FROM publysher/alpine-scipy:1.0.0-numpy1.14.0-python3.6-alpine3.7
-RUN apk --no-cache add --virtual .builddeps g++ musl-dev     && pip install scikit-learn==0.19.1     && apk del .builddeps     && rm -rf /root/.cache
+FROM python:3-alpine
+
 # Allows you to add additional packages via build-arg
 ARG ADDITIONAL_PACKAGE
 
@@ -32,6 +31,7 @@ RUN touch ./function/__init__.py
 WORKDIR /home/app/function/
 COPY function/ .
 # COPY function/requirements.txt	.
+RUN ls
 
 RUN pip install -r requirements.txt --target=/home/app/python
 
