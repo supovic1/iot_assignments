@@ -33,7 +33,7 @@ jobs:
 
     - stage: mqtt helper container
       script:
-        - docker build -f 2_smart_meter/edge/helper/Dockerfile 2_smart_meter/edge/helper -t stifstof/iotmqttinterceptor:latest
+        - docker build -f 2_smart_meter/edge/mqtt-interceptor/Dockerfile 2_smart_meter/edge/mqtt-interceptor -t stifstof/iotmqttinterceptor:latest
         - docker push stifstof/iotmqttinterceptor:latest
 
   # kubectl run --image=stifstof/iotmqttinterceptor iotmqttinterceptor-app --env="mqtt-pass="
