@@ -29,12 +29,12 @@ jobs:
       script:
         - echo -n $OPENFAAS_PASS | faas-cli login --username admin --password-stdin -g https://gateway.christoffernissen.me
         - faas-cli up -f 2_smart_meter/edge/iot-assignment2.yml --env write_debug=true
-        # - faas-cli up -f iot/iot-ml-func.yml --env write_debug=true
 
     - stage: mqtt helper container
       script:
         - docker build -f 2_smart_meter/edge/mqtt-interceptor/Dockerfile 2_smart_meter/edge/mqtt-interceptor -t stifstof/iotmqttinterceptor:latest
         - docker push stifstof/iotmqttinterceptor:latest
 
+  # To deploy mqtt-interceptor, run the command below from a cluster-connected device.
   # kubectl run --image=stifstof/iotmqttinterceptor iotmqttinterceptor-app --env="mqtt-pass="
   

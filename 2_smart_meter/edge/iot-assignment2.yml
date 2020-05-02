@@ -3,7 +3,7 @@ provider:
   name: openfaas
   gateway: https://gateway.christoffernissen.me
 functions:
-  iot-assignment2:
+  iot-influxdb-savedata-func:
     lang: python3-armhf-org
     handler: ./2_smart_meter/edge/influxdb-savedata
     image: stifstof/iot-assignment2:latest
