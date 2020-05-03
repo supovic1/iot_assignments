@@ -42,8 +42,8 @@ def on_message(client, userdata, msg):
 
     print(msg.topic+" "+json.dumps(r))
 
-    res = requests.post(gateway_url + "/function/iot-assignment2", data=r)
-    print("Log reading with function: ", res.status_code)
+    res = requests.post(gateway_url + "/function/iot-influxdb-savedata-func", data=r)
+    print("Function response code", res.status_code)
 
 
 mqtt_client = mqtt.Client()

@@ -3,22 +3,22 @@ provider:
   name: openfaas
   gateway: https://gateway.christoffernissen.me
 functions:
-  iot-assignment2:
+  iot-influxdb-savedata-func:
     lang: python3-armhf-org
-    handler: ./2_smart_meter/edge/iot-assignment2
+    handler: ./2_smart_meter/edge/influxdb-savedata
     image: stifstof/iot-assignment2:latest
     secrets:
       - influx-user
       - influx-pass
     environment:
-      influx_host: https://ec2-34-226-215-115.compute-1.amazonaws.com
+      influx_host: ec2-34-226-215-115.compute-1.amazonaws.com
       influx_port: 8086
       influx_db: smart_meter_cluster
   iot-user-creator-func:
     lang: python3-armhf
-    handler: ./2_smart_meter/edge/iot-user-creator
+    handler: ./2_smart_meter/edge/grafana-user-creator
     image: stifstof/iot-user-creator:latest
     secrets:
     environment:
-      host: https://ec2-34-226-215-115.compute-1.amazonaws.com:3000
+      host: ec2-34-226-215-115.compute-1.amazonaws.com:3000
     
