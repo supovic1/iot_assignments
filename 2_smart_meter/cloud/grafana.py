@@ -20,7 +20,7 @@ def _extract_id(str):
 def generate_user_data(meter_id):
     email = "meter_id_" + str(meter_id) + "@localhost"
     password = "meter_id_" + str(meter_id)
-    print ('login:', email, 'password:', password)
+    print('login:', email, 'password:', password)
     return '{ "email": "' + email + '", "login": "' + email + '","password": "' + password + '" }'
 
 
