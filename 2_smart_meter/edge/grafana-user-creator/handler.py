@@ -2,6 +2,9 @@ import datetime as dt
 from math import sqrt
 from time import sleep
 import os
+import json
+import random
+import string
 
 import requests
 import re
@@ -22,13 +25,20 @@ headers = {
 }
 
 
+def get_random_alphaNumeric_string(stringLength=12):
+    #https://pynative.com/python-generate-random-string/
+    lettersAndDigits = string.ascii_letters + string.digits
+    return ''.join((random.choice(lettersAndDigits) for i in range(stringLength)))
+
+
 def _extract_id(str):
     return re.findall(r'"id":\d+\b', str)[0][5:]
 
 
-def generate_user_data(meter_id):
-    email = "meter_id_" + str(meter_id) + "@" + HOST
-    password = "meter_id_" + str(meter_id)
+def generate_user_data(meter_id, email):
+    # email = "meter_id_" + str(meter_id) + "@" + HOST
+    # password = "meter_id_" + str(meter_id)
+    password = get_random_alphaNumeric_string(12)
     # print ('login:', email, 'password:', password)
 
     CREDENTIALS = {'login:', email, 'password:', password}
@@ -37,8 +47,8 @@ def generate_user_data(meter_id):
     return '{ "email": "' + email + '", "login": "' + email + '","password": "' + password + '" }'
 
 
-def create_user(meter_id):
-    response = requests.post(URL_USERS, headers=headers, data=generate_user_data(meter_id))
+def create_user(meter_id, email):
+    response = requests.post(URL_USERS, headers=headers, data=generate_user_data(meter_id, email))
     # print("Response:", response.text)
     return _extract_id(response.text)
 
@@ -80,8 +90,10 @@ def handle(req):
         req (str): request body
     """
 
-    meter_id = int(req)
-    user_id = create_user(meter_id)
+    r = json.loads(req)
+    
+    meter_id = int(r['meter-id'])
+    user_id = create_user(meter_id, r['email'])
     add_user_to_customers_team(user_id)
     dashboard_id = create_dashboard(meter_id)
     set_permissions(dashboard_id, user_id)
