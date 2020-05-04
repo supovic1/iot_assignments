@@ -36,5 +36,5 @@ jobs:
         - docker push stifstof/iotmqttinterceptor:latest
 
   # To deploy mqtt-interceptor, run the command below from a cluster-connected device.
-  # kubectl run --image=stifstof/iotmqttinterceptor iotmqttinterceptor-app --env="mqtt-pass="
+  # kubectl run --image=stifstof/iotmqttinterceptor iotmqttinterceptor-app --env="mqtt-pass=4mp3r3h0ur"
   
