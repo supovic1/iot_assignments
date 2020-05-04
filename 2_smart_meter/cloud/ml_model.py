@@ -59,8 +59,6 @@ def make_pipeline(model):
     steps = list()
     # standardization
     steps.append(('standardize', StandardScaler()))
-    # normalization
-    steps.append(('normalize', MinMaxScaler()))
     # the model
     steps.append(('model', model))
     # create pipeline
