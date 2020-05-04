@@ -1,6 +1,6 @@
 import datetime as dt
 from math import sqrt
-from time import sleep
+from holidays import Denmark
 
 import pandas as pd
 from influxdb import InfluxDBClient
@@ -14,11 +14,11 @@ from sklearn.preprocessing import StandardScaler
 INFLUXDB_ADDRESS = 'localhost'
 INFLUXDB_PORT = 8086
 INFLUXDB_USER = 'mqtt'
-INFLUXDB_PASSWORD = 'mqtt'
+INFLUXDB_PASSWORD = open('password.txt').read()
 INFLUXDB_DATABASE = 'smart_meter'
 
 influxdb_client = InfluxDBClient(INFLUXDB_ADDRESS, INFLUXDB_PORT, INFLUXDB_USER, INFLUXDB_PASSWORD, INFLUXDB_DATABASE)
-
+dk_holidays = Denmark()
 
 # read data for particular meter id (household)
 def read_data(meter_id):
@@ -33,6 +33,8 @@ def read_data(meter_id):
     for index, row in consumption_df.iterrows():
         date_time = dt.datetime.utcfromtimestamp(row["timestamp"]) - dt.timedelta(days=363, hours=22)
         workdays.append(1 if (date_time).weekday() < 5 else 0)
+        if date_time in dk_holidays:
+            workdays[-1] = 0
         hours.append(date_time.hour)
     consumption_df.insert(1, "workday", workdays)
     consumption_df.insert(2, "hour", hours)
@@ -40,6 +42,7 @@ def read_data(meter_id):
 
 
 # calculate root mean square error
+# picked from: https://machinelearningmastery.com/how-to-load-and-explore-household-electricity-usage-data/
 def evaluate_forecasts(actual, predicted):
     return sqrt(mean_squared_error(actual, predicted))
 
@@ -47,11 +50,11 @@ def evaluate_forecasts(actual, predicted):
 # prepare a list of ml models
 def get_models(models=dict()):
     models['rfr'] = RandomForestRegressor(random_state=1, n_estimators=100)
-    print('Defined %d models' % len(models))
     return models
 
 
-# create a feature preparation pipeline for a model
+# create pipeline: data preprocessing -> training
+# picked from: https://machinelearningmastery.com/how-to-load-and-explore-household-electricity-usage-data/
 def make_pipeline(model):
     steps = list()
     # standardization
@@ -66,7 +69,7 @@ def make_pipeline(model):
 
 
 # convert data into inputs and outputs
-def to_supervised(data):
+def to_input_output(data):
     X, y = list(), list()
     for i in range(len(data)):
         X.append(data[i][:-1])
@@ -77,8 +80,8 @@ def to_supervised(data):
 # evaluate a single model
 def evaluate_model(model, train, test):
     # convert train/test data to inputs and outputs
-    train_x, train_y = to_supervised(train)
-    test_x, test_y = to_supervised(test)
+    train_x, train_y = to_input_output(train)
+    test_x, test_y = to_input_output(test)
     # make pipeline
     pipeline = make_pipeline(model)
     # fit the model
@@ -108,27 +111,26 @@ def _send_sensor_data_to_influxdb(time, meter_id, value):
 
 
 def main():
-    while True:
-        for meter_id in range(4):
-            consumption_df, date_time = read_data(meter_id)
-            models = get_models()
-            # compute next 48 hours
-            for _ in range(48):
-                date_time += dt.timedelta(hours=1)
-                next_hour_X = [1 if (date_time).weekday() < 5 else 0, date_time.hour, 0]
-                next_hour_df = pd.DataFrame.from_records([next_hour_X], columns=["workday", "hour", "timestamp"])
-                score, scores = evaluate_model(models['rfr'],
-                                               array(consumption_df[["workday", "hour", "value"]].values),
-                                               next_hour_df.values)
-                # insert column (predicted) value
-                next_hour_df.insert(2, "value", scores)
-                _send_sensor_data_to_influxdb(date_time, meter_id, scores[0])
-                # concatenate dataframes
-                consumption_df = pd.concat([consumption_df, next_hour_df])
-        break
-        sleep(3600)
+    for meter_id in range(4):
+        consumption_df, date_time = read_data(meter_id)
+        models = get_models()
+        # compute next 48 hours
+        for _ in range(48):
+            date_time += dt.timedelta(hours=1)
+            next_hour_X = [1 if (date_time).weekday() < 5 else 0, date_time.hour, 0]
+            if date_time in dk_holidays:
+                next_hour_X[0] = 0
+            next_hour_df = pd.DataFrame.from_records([next_hour_X], columns=["workday", "hour", "timestamp"])
+            score, scores = evaluate_model(models['rfr'],
+                                           array(consumption_df[["workday", "hour", "value"]].values),
+                                           next_hour_df.values)
+            # insert column (predicted) value
+            next_hour_df.insert(2, "value", scores)
+            _send_sensor_data_to_influxdb(date_time, meter_id, scores[0])
+            # add predicted value to re-training data
+            consumption_df = pd.concat([consumption_df, next_hour_df])
+
 
 
 if __name__ == '__main__':
-    print('ML model')
     main()
